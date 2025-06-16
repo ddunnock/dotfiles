@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+# Vim/Neovim
+*.swp
+*.swo
+*.swn
+# Temporary build or test files
+*.bak
+
