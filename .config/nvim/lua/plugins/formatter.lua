@@ -29,6 +29,7 @@ return {
         json              = { require("formatter.filetypes.json").prettierd },
         yaml              = { require("formatter.filetypes.yaml").prettierd },
         markdown          = { require("formatter.filetypes.markdown").prettierd },
+        lua               = { require("formatter.filetypes.lua").luaformatter },
 
         ["*"]             = { function() return nil end },
       },
@@ -40,6 +41,7 @@ return {
         "*.js","*.jsx","*.ts","*.tsx",
         "*.css","*.scss","*.sass","*.html",
         "*.json","*.yml","*.yaml","*.md",
+        "lua",
       },
       command = "silent! FormatWrite",
     })

@@ -80,7 +80,7 @@ return {
           then
             root = vim.fn.stdpath('config')
           end
-          return root or util.path.dirname(fname)
+          return root or vim.fs.dirname(fname)
         end,
 
         settings = {
@@ -99,9 +99,26 @@ return {
       -----------------------------------------------------------------------
       -- 2.2  Python: Pyright + Ruff ----------------------------------------
       -----------------------------------------------------------------------
+      local py_venv = require("config.py_venv")
+
       lspconfig.pyright.setup({
         on_attach    = on_attach,
         capabilities = capabilities,
+
+        before_init = function(params, config)
+          local buf_path = vim.uri_to_fname(params.rootUri)
+          local root_dir = git_root(buf_path) or vim.fs.dirname(buf_path)
+
+        local venv = py_venv.detect(root_dir)
+        if venv then
+          config.settings           = config.settings           or {}
+          config.settings           = config.settings.python    or {}
+
+          config.settings.python.venvPath = vim.fs.dirname(venv)
+          config.settings.python.venv     = vim.fs.basename(venv)
+          config.settings.python.analysis = { ignoreMissingImports = true }
+          end 
+        end,
       })
 
       lspconfig.ruff.setup({
