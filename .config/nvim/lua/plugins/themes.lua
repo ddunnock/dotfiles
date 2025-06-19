@@ -11,6 +11,7 @@ return {
 
     opts = {
       flavor       = "mocha",
+      transparent_background = true,
       integrations = {
         treesitter = true,
         telescope  = true,
@@ -38,7 +39,7 @@ return {
 
     opts = {
       style           = "moon",   -- night | storm | day | moon
-      transparent     = false,
+      transparent     = true,
       terminal_colors = true,
       styles = {
         comments  = { italic = true },
@@ -66,7 +67,7 @@ return {
     priority = 1000,
 
     opts = {
-      transparent_bg = false,
+      transparent_bg = true,
       italic_comment = true,
       overrides = function(colors)   -- optional fine-tuning
         return {
@@ -94,7 +95,8 @@ return {
     opts = {
       variant         = "moon",  -- main | moon | dawn
       dark_variant    = "moon",
-      disable_float_background = false,
+      disable_float_background = true,
+      disable_background = true,
       disable_italics = false,
 
       highlight_groups = {

@@ -33,13 +33,21 @@ local function apply(t, show_msg)
   local ok, err = pcall(function()
     require("lazy.core.loader").load({ t.scheme }, {})
     vim.cmd.colorscheme(t.scheme)
+
+    ------------------------------------------------------------------
+    --- transparent backgrounds for *everything* just loaded
+    ------------------------------------------------------------------
+    local transparent = require("config.transparent")
+    transparent.apply()
   end)
 
   if ok then
+    
     ------------------------------------------------------------------
     -- 2.a  Pick highlight colours
     ------------------------------------------------------------------
     local p = get_palette(t.scheme) or {}
+    local comment_fg = p.surface2 or p.comment or "#7F849C"
     local red     = p.red      or "#F38BA8"
     local green   = p.green    or "#A6E3A1"
     local yellow  = p.yellow   or "#F9E2AF"
@@ -63,6 +71,14 @@ local function apply(t, show_msg)
     set(0, "NeoTreeDiagnosticWarn",    { fg = orange, italic = true })
     set(0, "NeoTreeDiagnosticInfo",    { fg = blue,   italic = true })
     set(0, "NeoTreeDiagnosticHint",    { fg = teal,   italic = true })
+
+    ------------------------------------------------------------------
+    --- 2.c Global Comment Style
+    ------------------------------------------------------------------
+    --- normal syntax
+    set(0, "Comment",   { fg = comment_fg, italic = true })
+    --- Tree-sitter captures
+    set(0, "@comment",  { link = "Comment" })
 
     ------------------------------------------------------------------
     -- 2.c  Notify success

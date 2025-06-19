@@ -1,4 +1,5 @@
 -- ~/.config/nvim/lua/plugins/none-ls.lua
+---@diagnostic disable: undefined-global
 return {
   "nvimtools/none-ls.nvim",
   event = { "BufReadPre", "BufNewFile" },
