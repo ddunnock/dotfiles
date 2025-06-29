@@ -19,6 +19,7 @@ return {
         'lua_ls', 'pyright', 'ruff', 'texlab',
         'jsonls', 'yamlls', 'html', 'cssls', 'bashls',
       },
+      automatic_installation = false, -- Explicitly disable auto-installation
       -- you could also put `handlers = {}` here instead of the ★ line below
     },
   },
@@ -35,9 +36,34 @@ return {
 
     config = function()
       -----------------------------------------------------------------------
-      -- ★  turn off Mason’s *automatic* lspconfig.setup({}) ----------------
+      -- ★  turn off Mason's *automatic* lspconfig.setup({}) ----------------
       -----------------------------------------------------------------------
-      require('mason-lspconfig').setup({ handlers = {} })
+      require('mason-lspconfig').setup({ 
+        handlers = {
+          -- Disable auto-setup for ltex (we'll use ltex_plus instead)
+          ['ltex'] = function() end,
+          -- Disable auto-setup for ltex_plus (we'll configure it manually)
+          ['ltex_plus'] = function() end,
+        }
+      })
+
+      -- Aggressively prevent default ltex_plus from starting
+      vim.api.nvim_create_autocmd("LspAttach", {
+        callback = function(args)
+          local client = vim.lsp.get_client_by_id(args.data.client_id)
+          if client and client.name == "ltex_plus" then
+            -- Check if this is the default instance (without our custom settings)
+            local settings = client.config.settings or {}
+            local ltex_settings = settings.ltex or {}
+            
+            -- If it doesn't have our custom dictionary, stop it
+            if not ltex_settings.dictionary or not ltex_settings.dictionary["en-US"] then
+              vim.lsp.stop_client(client.id)
+              return
+            end
+          end
+        end,
+      })
 
       local lspconfig = require('lspconfig')
       local util      = require('lspconfig.util')
@@ -135,17 +161,129 @@ return {
         capabilities = capabilities,
         settings     = {
           texlab = {
-            build = { onSave = true },
+            build = {
+              onSave = true,               -- Enable for diagnostics
+              executable = 'xelatex',      -- Use xelatex directly for diagnostics
+              args = {
+                '-file-line-error',
+                '-synctex=1', 
+                '-interaction=nonstopmode',
+                '-shell-escape',
+                '-output-directory=build',   -- Keep build files organized
+                '%f'
+              },
+              forwardSearchAfter = false,
+            },
+            -- Enable diagnostics with proper engine
+            diagnosticsDelay = 300,
+            auxDirectory = 'build',
+            bibtexFormatter = 'texlab',
             forwardSearch = {
               executable = 'zathura',
               args       = { '--synctex-forward', '%l:1:%f', '%p' },
+            },
+            chktex = {
+              onEdit = false,              -- Disable ChkTeX to avoid noise
+              onOpenAndSave = false,
+            },
+            latexFormatter = 'latexindent',
+            latexindent = {
+              ['local'] = nil,
+              modifyLineBreaks = false,
             },
           },
         },
       })
 
       -----------------------------------------------------------------------
-      -- 2.4  Generic setups -------------------------------------------------
+      -- 2.4  LTeX Plus (Grammar and Spell Checking) -------------------------
+      -----------------------------------------------------------------------
+      -- Configure ltex_plus with our custom settings
+      lspconfig.ltex_plus.setup({
+        on_attach = function(client, bufnr)
+          -- Call the default on_attach
+          on_attach(client, bufnr)
+          
+          -- Send workspace configuration to disable problematic rules
+          vim.defer_fn(function()
+            local dict_file = vim.fn.stdpath('config') .. '/spell/tex.utf-8.add'
+            client.notify('workspace/didChangeConfiguration', {
+              settings = {
+                ltex = {
+                  disabledRules = {
+                    ["en-US"] = {
+                      "MORFOLOGIK_RULE_EN_US",
+                      "COMMA_PARENTHESIS_WHITESPACE",
+                      "WHITESPACE_RULE",
+                      "EN_QUOTES",
+                      "SENTENCE_WHITESPACE",
+                    },
+                  },
+                  dictionary = {
+                    ["en-US"] = { ":" .. dict_file },
+                  },
+                },
+              },
+            })
+          end, 2000)
+          
+          -- Create command to add words to LTeX Plus dictionary
+          vim.api.nvim_create_user_command('LTexAddWord', function(opts)
+            local word = opts.args
+            if word == "" then
+              word = vim.fn.expand("<cword>")
+            end
+            
+            local clients = vim.lsp.get_clients({ name = "ltex_plus" })
+            for _, ltex_client in ipairs(clients) do
+              ltex_client.notify('workspace/didChangeConfiguration', {
+                settings = {
+                  ltex = {
+                    dictionary = {
+                      ["en-US"] = { word },
+                    },
+                  },
+                },
+              })
+              print("Added '" .. word .. "' to LTeX Plus dictionary")
+            end
+          end, { nargs = '?' })
+        end,
+        capabilities = capabilities,
+        cmd = { "ltex-ls-plus" },
+        filetypes = { "tex", "latex", "plaintex", "markdown" },
+        settings = {
+          ltex = {
+            enabled = { "latex", "tex", "plaintex", "markdown" },
+            language = "en-US",
+            -- Disable the overly strict morphology rule that flags proper names
+            disabledRules = {
+              ["en-US"] = {
+                "MORFOLOGIK_RULE_EN_US",  -- This rule flags proper names
+                "COMMA_PARENTHESIS_WHITESPACE",
+                "WHITESPACE_RULE",
+                "EN_QUOTES",
+                "SENTENCE_WHITESPACE",
+              },
+            },
+            dictionary = {
+              ["en-US"] = { ":" .. vim.fn.stdpath('config') .. "/spell/tex.utf-8.add" },
+            },
+            -- Less aggressive checking
+            additionalRules = {
+              enablePickyRules = false,
+              motherTongue = "en-US",
+            },
+            completionEnabled = true,
+            diagnosticSeverity = "information", -- Make diagnostics less prominent
+            checkFrequency = "save", -- Only check on save
+          },
+        },
+      })
+
+      
+      -----------------------------------------------------------------------
+      -- 2.6  Generic setups -------------------------------------------------
       -----------------------------------------------------------------------
       for _, server in ipairs({ 'jsonls', 'yamlls', 'html', 'cssls', 'bashls' }) do
         lspconfig[server].setup({

@@ -27,7 +27,43 @@ return {
     git_status = { enabled = true }, -- keep the config so it can be toggled
     document_symbols = { follow_cursor = true },
 
-    filesystem = { use_git_status_colors = true },
+    filesystem = {
+      use_git_status_colors = true,
+      filtered_items = {
+        visible = false,           -- shows items that would normally be hidden by defaults
+        hide_dotfiles = false,     -- shows dotfiles (e.g., .git, .zshrc
+        hide_gitignored = false,  -- shows git-ignored files
+        hide_hidden = false,      -- shows files hidden by the OS (eg., on macOS)
+        hide_by_name = {
+          ".DS_Store",
+          "thumbs.db",
+          "node_modules",
+          "__pycache__",
+          "venv",
+          ".git",
+          "pytest_cache",
+        },
+
+        -- Hide by patterns (wildcards)
+        hide_by_pattern = {
+          -- python artifacts
+          "*.pyc",
+          -- LaTeX auxiliary files to hide
+          "*.aux",
+          "*.fdb_latexmk",
+          "*.fls",
+          "*.synctex.gz",
+          "*.toc",
+          "*.out",
+        },
+
+        -- Items that should NEVER be shown (overrides "visible = true")
+        never_show = {
+          ".git",
+          "node_modules",
+        },
+      },
+      },
 
     default_component_configs = {
       diagnostics = {
@@ -48,7 +84,21 @@ return {
     },
   },
 	config = function(_, opts)
-		-------------------------------------------------------------------------
+    -------------------------------------------------------------------------
+    --- (A) Add custom icons for .sty / .cls --------------------------------
+    -------------------------------------------------------------------------
+    local devicons = require("nvim-web-devicons")
+
+    devicons.set_icon({
+      --                       👇 glyph = "\uE8BE"
+      sty = { icon = "", color = "#4E6EBD", name = "TeXStyle"  }, -- nf-mdi-alpha-t-box
+      cls = { icon = "", color = "#4E6EBD", name = "TeXClass"  },
+
+      --                       👇 glyph = "\uE69B"
+      tex = { icon = "", color = "#4E6EBD", name = "TeX"       }, -- (overwrite default for consistency)
+    })
+
+    -------------------------------------------------------------------------
 		-- 1. Standard Neo-tree setup (without git_status in the source list)
 		-------------------------------------------------------------------------
 		require("neo-tree").setup(opts)
